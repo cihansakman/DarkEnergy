@@ -1,9 +1,6 @@
 import psutil
 from pprint import pprint as pp
 import time
-
-import psutil
-import time
 import matplotlib.pyplot as plt
 
 # Specify the process name to monitor
