@@ -25,6 +25,7 @@ the total energy consumption of last n seconds.
 
 '''
 
+# Convert mikroJ to kW
 def mikroJ_to_kw_hour(mJ):
     return mJ * 2.7777777777778E-13
 
@@ -38,6 +39,10 @@ def format_scientific_notation(number):
 
 def return_random_int():
     return random.randint(-9999,99999)
+
+#Calculate efficiency difference
+def efficiency_difference(before, after):
+    return ((after - before) / before ) * 100
 
 # A function runs forever with 1 second breaks until user types Ctrl + C
 def foo(duration):
@@ -80,6 +85,7 @@ def print_changed_content(filename='pyJoules_result.csv'):
     while True:
         try:
             previous_data = pd.DataFrame()  # Variable to store previous data
+            previous_total = 0 # Keep the last n seconds data
             while True:
                 print("Print changed content")
 
@@ -104,6 +110,20 @@ def print_changed_content(filename='pyJoules_result.csv'):
                     Memory energy consumption: {format_scientific_notation(last_df['dram_0'].sum())} kw/h
                     ''')
 
+                    #Compare the energy consumption difference with last n seconds
+                    current_total = last_df['core_0'].sum() + last_df['uncore_0'].sum() + last_df['dram_0'].sum()
+                    #previous_total = previous_last_df['core_0'].sum() + previous_last_df['uncore_0'].sum() + previous_last_df['dram_0'].sum()
+                    
+                    if(previous_total != 0):
+                        difference = efficiency_difference(previous_total, current_total)
+                        if(difference > 0):
+                            print(f"Total Energy consumption increased by {abs(difference):.2f}%")
+
+                        else:
+                            print(f"Total Energy consumption decreased by {abs(difference):.2f}%")
+
+
+                    previous_total = current_total #update previous_total
 
                 previous_data = current_data  # Update the previous data
                 time.sleep(2)
@@ -119,20 +139,25 @@ during the measurement process and tag them to know amount of energy consumed be
 '''
 csv_handler = CSVHandler('pyJoules_result.csv')
 def track_energy():
-    j = 0
-    while j < 2:
-        with EnergyContext(handler=csv_handler) as ctx:
-            for i in range(3):
-                #first function
-                ctx.record(tag='foo')
-                foo(5)
-                #second function
-                ctx.record(tag='bar')
-                bar(5)
-        csv_handler.save_data()
-        time.sleep(2)
-        j+=1
-
+    stop_flag = 0
+    try:
+        j = 0
+        while j < 5 and stop_flag == 0:
+            with EnergyContext(handler=csv_handler) as ctx:
+                for i in range(3):
+                    #first function
+                    ctx.record(tag='foo')
+                    foo(5)
+                    #second function
+                    ctx.record(tag='bar')
+                    bar(5)
+            csv_handler.save_data()
+            time.sleep(2)
+            j+=1
+        print("***********\nEnergy Consumption Tracking is OVER!\n***************")
+    except KeyboardInterrupt:
+        stop_flag = 1
+        print("Interrupted")
 
 
 #print_changed_content('pyJoules_result.csv')
