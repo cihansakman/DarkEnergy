@@ -59,9 +59,53 @@ for i in range(5):
     csv_output.save()
 '''
 
-import powertop
-import json
+#Print the process information with desired sorted format
+'''
+import psutil
 
-measures = powertop.Powertop().get_measures(time=1)
+# Get a list of running processes
+processes = []
+for process in psutil.process_iter(['pid', 'name', 'memory_percent', 'cpu_times']):
+    processes.append(process)
 
-print(json.dumps(measures['Device Power Report'], indent=4))
+# Sort the processes by CPU usage in descending order
+sorted_processes = sorted(processes, key=lambda process: process.info['cpu_times'].user + process.info['cpu_times'].system, reverse=True)
+
+# Print the sorted processes
+for process in sorted_processes:
+    print(f"PID: {process.info['pid']}, Name: {process.info['name']}, Memory Percent: {process.info['memory_percent']}%, CPUT Time: {process.info['cpu_times'].user + process.info['cpu_times'].system}")
+
+
+'''
+
+
+import subprocess
+import csv
+
+# Run PowerTOP command and capture the output
+command = "sudo powertop --csv=report.csv"
+subprocess.run(command, shell=True)
+
+
+# Read the report.csv file
+with open('report.csv', 'r') as file:
+    reader = csv.DictReader(file)
+    data = list(reader)
+
+# Sort the data based on the "Usage" column in descending order
+sorted_data = sorted(data, key=lambda x: float(x['Usage']), reverse=True)
+
+# Select the top 10 power consumers
+top_consumers = sorted_data[:10]
+
+# Define the field names for the new CSV file
+fieldnames = ['Usage', 'Events/s', 'Category', 'Description']
+
+# Write the top consumers to a new CSV file
+with open('top_consumers.csv', 'w', newline='') as file:
+    writer = csv.DictWriter(file, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(top_consumers)
+
+print("Top 10 power consumers saved to top_consumers.csv")
+

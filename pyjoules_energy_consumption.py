@@ -147,10 +147,10 @@ def track_energy():
                 for i in range(3):
                     #first function
                     ctx.record(tag='foo')
-                    foo(5)
+                    foo(3)
                     #second function
                     ctx.record(tag='bar')
-                    bar(5)
+                    bar(3)
             csv_handler.save_data()
             time.sleep(2)
             j+=1
