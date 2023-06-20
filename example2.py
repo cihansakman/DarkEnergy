@@ -1,7 +1,7 @@
 import psutil
 import pyRAPL
 import time
-
+import pandas as pd
 #List last 5 processes.
 
 #print(psutil.pids())
@@ -79,56 +79,72 @@ for process in sorted_processes:
 '''
 
 '''
-import subprocess
 import csv
 
-# Run PowerTOP command and capture the output
-command = "sudo powertop --csv=report.csv"
-subprocess.run(command, shell=True)
+
+def extract_top_power_consumers(file_path):
+    dataset = []
+    pattern = "*  *  *   Top 10 Power Consumers   *  *  *"
+    end_pattern = "____________________________________________________________________"
+    found_pattern = False
+
+    with open(file_path, newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            #Find the pattern
+            if row and row[0].strip() == pattern:
+                found_pattern = True
+                continue
+            #If we reach the end of the Top 10 power consumers section break the loop
+            if found_pattern and (row and row[0].strip() == end_pattern):
+                break 
+            #Add the rows into the dataset
+            elif found_pattern and len(row) > 0:
+                dataset.append(row[0])
+            
+
+    return dataset
+
+# Example usage
+file_path = 'report.csv'
+top_power_consumers = extract_top_power_consumers(file_path)
+
+# Print the top power consumers
+for row in top_power_consumers:
+    print(row)
 
 
-# Read the report.csv file
-with open('report.csv', 'r') as file:
-    reader = csv.DictReader(file)
-    data = list(reader)
 
-# Sort the data based on the "Usage" column in descending order
-sorted_data = sorted(data, key=lambda x: float(x['Usage']), reverse=True)
+# Split the first item into column names
+column_names = top_power_consumers[0].split(';')
 
-# Select the top 10 power consumers
-top_consumers = sorted_data[:10]
+# Create a DataFrame from the remaining items
+df = pd.DataFrame([row.split(';') for row in top_power_consumers[1:]], columns=column_names)
 
-# Define the field names for the new CSV file
-fieldnames = ['Usage', 'Events/s', 'Category', 'Description']
+print("DATAFRAME")
+print(df)
 
-# Write the top consumers to a new CSV file
-with open('top_consumers.csv', 'w', newline='') as file:
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(top_consumers)
+df_processes = df[df['Category']=='Process']
 
-print("Top 10 power consumers saved to top_consumers.csv")
+print("df_process")
+print(df_processes)
+
+for ind in df_processes.index:
+    s = df_processes['Description'][ind]
+    pid = s[s.find("[")+1:s.find("]")].split()
+    print(pid[1])
 '''
 
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
+from powerTop import powerTOP
 
-        
-            
-# Read the CSV file with ';' delimiter
-df = pd.read_csv('pyJoules_result.csv', delimiter=';')
-#Do not get the rows with start tag.
-df = df[df['tag'] != 'start']
-# Convert the timestamp column to datetime format
-df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+powertop_instance = powerTOP('report.csv')
 
-# Calculate the elapsed time since the earliest timestamp
-df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).dt.total_seconds()
+#powertop_instance.run_powertop()
 
+top_10_df = powertop_instance.get_top10_as_df()
+print(top_10_df)
 
-print(df.head(5))
 
         
 
