@@ -78,7 +78,7 @@ for process in sorted_processes:
 
 '''
 
-
+'''
 import subprocess
 import csv
 
@@ -108,4 +108,27 @@ with open('top_consumers.csv', 'w', newline='') as file:
     writer.writerows(top_consumers)
 
 print("Top 10 power consumers saved to top_consumers.csv")
+'''
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+
+        
+            
+# Read the CSV file with ';' delimiter
+df = pd.read_csv('pyJoules_result.csv', delimiter=';')
+#Do not get the rows with start tag.
+df = df[df['tag'] != 'start']
+# Convert the timestamp column to datetime format
+df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+
+# Calculate the elapsed time since the earliest timestamp
+df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).dt.total_seconds()
+
+
+print(df.head(5))
+
+        
 

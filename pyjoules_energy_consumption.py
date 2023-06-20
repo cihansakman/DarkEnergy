@@ -142,7 +142,7 @@ def track_energy():
     stop_flag = 0
     try:
         j = 0
-        while j < 5 and stop_flag == 0:
+        while j < 2 and stop_flag == 0:
             with EnergyContext(handler=csv_handler) as ctx:
                 for i in range(3):
                     #first function
@@ -162,11 +162,70 @@ def track_energy():
 
 #print_changed_content('pyJoules_result.csv')
 
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+
+
+def visualize():
+    #Style for plot
+    plt.style.use('fivethirtyeight')
+
+    # Initialize the figure and axis
+    fig, ax = plt.subplots()
+
+    def animate(i):
+        #Create a while loop if there is no such a CSV file wait until it is creating...
+        while True:
+            try:
+                # Read the CSV file with ';' delimiter
+                df = pd.read_csv('pyJoules_result.csv', delimiter=';')
+                #Do not get the rows with start tag.
+                df = df[df['tag'] != 'start']
+
+                # Convert the timestamp column to datetime format
+                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+
+                # Calculate the elapsed time since the earliest timestamp
+                df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).dt.total_seconds()
+
+                # Clear the plot
+                ax.clear()
+
+                # Plot the data
+                ax.plot(df['elapsed_time'], df['package_0'])
+
+                # Set labels and title
+                ax.set_xlabel('Elapsed Time (seconds)')
+                ax.set_ylabel('Energy Consumption (package_0)')
+                ax.set_title('Energy Consumption over Time')
+
+                # Format x-axis
+                plt.gcf().autofmt_xdate()
+
+                # Adjust layout
+                plt.tight_layout()
+                plt.show()
+                break
+            except:
+                print("There is no such a CSV file please wait until it is creating...")
+                time.sleep(5)
+
+
+    # Create the animation
+    ani = FuncAnimation(fig, animate, interval=1000)
+
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__=='__main__':
+   
     p2 = Process(target=track_energy)
     p2.start()
     p1 = Process(target=print_changed_content)
     p1.start()
+    visualize()
+    
     
