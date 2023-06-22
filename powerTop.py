@@ -57,5 +57,5 @@ class powerTOP:
         for ind in df_processes.index:
             s = df_processes['Description'][ind]
             pid = s[s.find("[")+1:s.find("]")].split()
-            pids_list.append(pid[1])
+            pids_list.append(int(pid[1]))
         return pids_list

@@ -63,7 +63,7 @@ else:
         # Plot the data consumption in real-time
         plt.plot(time_list, data_list)
         plt.xlabel('Time (s)')
-        plt.ylabel('Data Consumption (MB)')
+        plt.ylabel('Total Data Consumption (MB)')
         plt.title('Live Data Consumption')
         plt.grid(True)
         plt.pause(0.1)

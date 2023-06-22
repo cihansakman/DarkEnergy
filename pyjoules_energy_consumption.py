@@ -142,15 +142,15 @@ def track_energy():
     stop_flag = 0
     try:
         j = 0
-        while j < 2 and stop_flag == 0:
+        while j < 3 and stop_flag == 0:
             with EnergyContext(handler=csv_handler) as ctx:
                 for i in range(3):
                     #first function
                     ctx.record(tag='foo')
-                    foo(3)
+                    foo(5)
                     #second function
                     ctx.record(tag='bar')
-                    bar(3)
+                    bar(5)
             csv_handler.save_data()
             time.sleep(2)
             j+=1
