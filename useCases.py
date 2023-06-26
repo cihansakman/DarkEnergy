@@ -137,11 +137,23 @@ for ind in df_processes.index:
 
 
 from powerTop import powerTOP
+import os
 
-powertop_instance = powerTOP('report.csv')
-
+#add all csv files started with report- to a list
+#sort them as their names and the biggest one will be the latest report.
+powertop_instance = powerTOP(time=10, iteration=1)
 #Run the powertop and collect some info about power usage
-powertop_instance.run_powertop()
+for i in range(3):
+    powertop_instance.run_powertop()
+prefixed = [filename for filename in os.listdir('.') if filename.startswith("report-")]
+
+
+
+prefixed.sort(reverse=True)
+
+for i in prefixed:
+    print(i)
+
 
 top_10_df = powertop_instance.get_top10_as_df()
 print(top_10_df)
@@ -149,13 +161,16 @@ print(top_10_df)
 top_10_process = powertop_instance.get_top_process_pids()
 print(top_10_process)
 
-        
+
+
+
+
+
 print(f"There is an unexpectional energy consumption in your computer please check following processes.")
-'''
 for i in top_10_process:
     p = psutil.Process(i)
     if p.status() != 'idle':
-        print(f'
+        print(f'''
         Process: {p}
         PID: {p.pid}
         Name: {p.name()}
@@ -169,16 +184,14 @@ for i in top_10_process:
 
         ***********************************
         ***********************************
-         ')
+         ''')
     time.sleep(0.1)   
+
 '''
-
-
-
-
 process = psutil.Process(3464)
 
 for func_name in process.as_dict().keys():
     func = getattr(process, func_name)
     result = func()
     print(f"{func_name}: {result}")
+'''

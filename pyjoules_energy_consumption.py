@@ -6,7 +6,7 @@ import pandas as pd
 from multiprocessing import Process
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-
+from powerTop import powerTOP
 '''
 In this script, we're tracking the energy consumption of different functions for each given seconds and save them into CSV files.
 Using multiprocessing we also tracking the CSV files if there are new data or not. If there are new data inputs we're calculating
@@ -27,6 +27,10 @@ the total energy consumption of last n seconds.
 *    uncore : correspond to the integrated GPU energy consumption
 
 '''
+#Global powertop instance
+#Runs for 30secs and writes report into report.csv
+#It takes extra 4secs to write report
+powertop_instance = powerTOP(time=25, iteration=0)
 
 # Convert mikroJ to kW
 def mikroJ_to_kw_hour(mJ):
@@ -50,7 +54,7 @@ def efficiency_difference(before, after):
 # A function with 1 second breaks until user types Ctrl + C
 def foo(duration):
     try:
-        i = 1
+        i = 0
         while i<duration:
             print("foo ",i)
             time.sleep(1)
@@ -63,7 +67,7 @@ def foo(duration):
 def bar(duration):
     #Create random integers and make some calculations for in each iteration.
     try:
-        i = 1
+        i = 0
         while i<duration:
             print("bar ",i)
             a = return_random_int()
@@ -90,12 +94,12 @@ def print_changed_content(filename='pyJoules_result.csv'):
             previous_data = pd.DataFrame()  # Variable to store previous data
             previous_total = 0 # Keep the last n seconds data
             while True:
-                print("Print changed content")
+                #print("Print changed content")
 
                 #while True:
                 current_data = pd.read_csv(filename, sep=';')  # Read the CSV file
 
-                print(f"previous_data shape: {previous_data.shape[0]}, current_data shape: {current_data.shape[0]}")
+                #print(f"previous_data shape: {previous_data.shape[0]}, current_data shape: {current_data.shape[0]}")
 
                 if has_data_changed(current_data, previous_data):
                     # Delete rows with 'tag' column value as 'start'
@@ -121,9 +125,13 @@ def print_changed_content(filename='pyJoules_result.csv'):
                         difference = efficiency_difference(previous_total, current_total)
                         if(difference > 0):
                             print(f"Total Energy consumption increased by {abs(difference):.2f}%")
+                            top_10_process = powertop_instance.get_top_process_pids()
+                            print(f'top_10_process: {top_10_process}')
 
                         else:
                             print(f"Total Energy consumption decreased by {abs(difference):.2f}%")
+                            top_10_process = powertop_instance.get_top_process_pids()
+                            print(f'top_10_process: {top_10_process}')
 
 
                     previous_total = current_total #update previous_total
@@ -146,7 +154,7 @@ def track_energy():
     stop_flag = 0
     try:
         j = 0
-        while j < 3 and stop_flag == 0:
+        while j < 5 and stop_flag == 0:
             with EnergyContext(handler=csv_handler) as ctx:
                 for i in range(3):
                     #first function
@@ -227,17 +235,31 @@ def visualize():
     plt.show()
 
 
+#Function to run power_top. The object will be assigned globally
+def run_powertop():
 
+    for i in range(5):
+        #Run the powertop and collect some info about power usage
+        powertop_instance.run_powertop()
+        time.sleep(2)
+    #top_10_df = powertop_instance.get_top10_as_df()
+    #print(top_10_df)
+
+    #top_10_process = powertop_instance.get_top_process_pids()
+    #print(top_10_process)
 
 #Multiprocessing
 if __name__=='__main__':
-   
+
+    p4 = Process(target=run_powertop)
+    p4.start()
     p2 = Process(target=track_energy)
     p2.start()
     p1 = Process(target=print_changed_content)
     p1.start()
-    p3 = Process(target=visualize)
-    p3.start()
+    #p3 = Process(target=visualize)
+    #p3.start()
+   
     #visualize()
     
     
