@@ -151,10 +151,12 @@ print(top_10_process)
 
         
 print(f"There is an unexpectional energy consumption in your computer please check following processes.")
+'''
 for i in top_10_process:
     p = psutil.Process(i)
     if p.status() != 'idle':
-        print(f'''
+        print(f'
+        Process: {p}
         PID: {p.pid}
         Name: {p.name()}
         Status: {p.status()}
@@ -164,5 +166,19 @@ for i in top_10_process:
 
         Memory Info: {p.memory_full_info()}
         Memory Percent: {p.memory_percent()}
-         ''')
+
+        ***********************************
+        ***********************************
+         ')
     time.sleep(0.1)   
+'''
+
+
+
+
+process = psutil.Process(3464)
+
+for func_name in process.as_dict().keys():
+    func = getattr(process, func_name)
+    result = func()
+    print(f"{func_name}: {result}")

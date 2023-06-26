@@ -4,6 +4,8 @@ import time
 import random
 import pandas as pd
 from multiprocessing import Process
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 '''
 In this script, we're tracking the energy consumption of different functions for each given seconds and save them into CSV files.
@@ -12,8 +14,9 @@ the total energy consumption of last n seconds.
 
 #Future work
 -The main idea is tracking the energy consumption of each 30seconds and detect and kind of unexpected power usage. For i.e
-%25 more power used for 30seconds. 
+50% more power used for 30seconds. 
 - Then list the most consuming 5 processes by their CPU usage or Memory usage and give a warning to user!
+    - PowerTOP and psutils can be used for these purpose
 '''
 
 
@@ -21,7 +24,7 @@ the total energy consumption of last n seconds.
 
 *    Package : correspond to the wall cpu energy consumption
 *    core : correpond to the sum of all cpu core energy consumption
-*    uncore : correspond to the integrated GPU
+*    uncore : correspond to the integrated GPU energy consumption
 
 '''
 
@@ -40,11 +43,11 @@ def format_scientific_notation(number):
 def return_random_int():
     return random.randint(-9999,99999)
 
-#Calculate efficiency difference
+#Calculate efficiency difference in percentages
 def efficiency_difference(before, after):
     return ((after - before) / before ) * 100
 
-# A function runs forever with 1 second breaks until user types Ctrl + C
+# A function with 1 second breaks until user types Ctrl + C
 def foo(duration):
     try:
         i = 1
@@ -127,6 +130,7 @@ def print_changed_content(filename='pyJoules_result.csv'):
 
                 previous_data = current_data  # Update the previous data
                 time.sleep(2)
+        #If there is no such a file wait until it created
         except FileNotFoundError:
             time.sleep(5)
             pass
@@ -159,15 +163,11 @@ def track_energy():
         stop_flag = 1
         print("Interrupted")
 
-
-#print_changed_content('pyJoules_result.csv')
-
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-
-
-
+'''
+There is a little problem with visualization. Due to we get timestamp the elapsed time calculating by the
+timeline when the function called. If we didn't clear the csv file and run it 5 mins later it will show the
+figure as it was working for 300 seconds. 
+'''
 def visualize():
     #Style for plot
     plt.style.use('fivethirtyeight')
@@ -194,11 +194,18 @@ def visualize():
                 ax.clear()
 
                 # Plot the data
-                ax.plot(df['elapsed_time'], df['package_0'])
+                '''
+                Package_0 refers to the energy consumption of the entire package, which typically includes
+                the CPU cores, integrated GPU, and other components on the chip. It represents the total power
+                consumed by the processor package.
+
+                In order to calculate total energy consumption we should sum them up with DRAM energy consumtpion
+                '''
+                ax.plot(df['elapsed_time'], (mikroJ_to_kw_hour(df['package_0'])+mikroJ_to_kw_hour(df['dram_0'])))
 
                 # Set labels and title
                 ax.set_xlabel('Elapsed Time (seconds)')
-                ax.set_ylabel('Energy Consumption (package_0)')
+                ax.set_ylabel('Energy Consumption (kw/h)')
                 ax.set_title('Energy Consumption over Time')
 
                 # Format x-axis
@@ -220,12 +227,17 @@ def visualize():
     plt.show()
 
 
+
+
+#Multiprocessing
 if __name__=='__main__':
    
     p2 = Process(target=track_energy)
     p2.start()
     p1 = Process(target=print_changed_content)
     p1.start()
-    visualize()
+    p3 = Process(target=visualize)
+    p3.start()
+    #visualize()
     
     
