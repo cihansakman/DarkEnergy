@@ -7,6 +7,7 @@ from multiprocessing import Process
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from powerTop import powerTOP
+
 '''
 In this script, we're tracking the energy consumption of different functions for each given seconds and save them into CSV files.
 Using multiprocessing we also tracking the CSV files if there are new data or not. If there are new data inputs we're calculating
@@ -19,7 +20,6 @@ the total energy consumption of last n seconds.
     - PowerTOP and psutils can be used for these purpose
 '''
 
-
 '''
 
 *    Package : correspond to the wall cpu energy consumption
@@ -28,9 +28,9 @@ the total energy consumption of last n seconds.
 
 '''
 #Global powertop instance
-#Runs for 30secs and writes report into report.csv
-#It takes extra 4secs to write report
-powertop_instance = powerTOP(time=25, iteration=0, latest=False)
+#Runs for 30secs and writes report with current timestamp.
+#It takes extra 4secs to write the report
+powertop_instance = powerTOP(time=8, iteration=0, latest=False)
 #Target csv file to store pyJoules energy measurements
 csv_handler = CSVHandler('pyJoules_result.csv')
 
@@ -46,9 +46,6 @@ def format_scientific_notation(number):
     exponent = int(exponent)
     return f"{coefficient}x10^-{exponent}"
 
-def return_random_int():
-    return random.randint(-9999,99999)
-
 #Calculate efficiency difference in percentages
 def efficiency_difference(before, after):
     return ((after - before) / before ) * 100
@@ -62,7 +59,6 @@ def foo(duration):
                 print('foo', i)
             time.sleep(1)
             i+=1
-            
     except KeyboardInterrupt:
         pass    
 
@@ -119,12 +115,12 @@ def print_changed_content(filename='pyJoules_result.csv'):
                         #calculate the efficiency
                         difference = efficiency_difference(previous_total, current_total)
                         if(difference > 0):
-                            print(f"Total Energy consumption increased by {abs(difference):.2f}% compared to last n seconds")
+                            print(f"Total Energy consumption increased by {abs(difference):.2f}% compared to last {last_df['duration'].sum():.2f} seconds")
                             top_10_process = powertop_instance.get_top_process_pids()
                             print(f'TOP 10 PROCESS: {top_10_process}')
 
                         else:
-                            print(f"Total Energy consumption decreased by {abs(difference):.2f}% compared to last n seconds")
+                            print(f"Total Energy consumption decreased by {abs(difference):.2f}% compared to last {last_df['duration'].sum():.2f} seconds")
                             top_10_process = powertop_instance.get_top_process_pids()
                             print(f'TOP 10 PROCESS: {top_10_process}')
 
@@ -138,8 +134,6 @@ def print_changed_content(filename='pyJoules_result.csv'):
             time.sleep(5)
             pass
 
-
-
 '''
 If you want to know where is the "hot spots" where your python code consume the most energy you can add "breakpoints" 
 during the measurement process and tag them to know amount of energy consumed between this breakpoints.
@@ -152,14 +146,15 @@ def track_energy(n_times):
             with EnergyContext(handler=csv_handler) as ctx:
                 #first function
                 ctx.record(tag='foo')
-                foo(30)
+                foo(10)
                 #second function
                 #ctx.record(tag='bar')
                 #bar(5)
             csv_handler.save_data()
             j+=1
-            print(f'{j*30} seconds...')
+            print(f'{j*10} seconds...')
         print("***********\nEnergy Consumption Tracking is OVER!\n***************")
+
     except KeyboardInterrupt:
         stop_flag = 1
         print("Interrupted")
@@ -170,88 +165,87 @@ timeline when the function called. If we didn't clear the pyJoules_result.csv fi
 figure as it was working for 300 seconds. 
 '''
 def visualize():
-    #Style for plot
-    plt.style.use('fivethirtyeight')
+    try:
+        #Style for plot
+        plt.style.use('fivethirtyeight')
 
-    # Initialize the figure and axis
-    fig, ax = plt.subplots()
+        # Initialize the figure and axis
+        fig, ax = plt.subplots()
 
-    def animate(i):
-        #Create a while loop if there is no such CSV file and wait until it is created...
-        while True:
-            try:
-                # Read the CSV file with ';' delimiter
-                df = pd.read_csv('pyJoules_result.csv', delimiter=';')
-                #Do not get the rows with start tag.
-                df = df[df['tag'] != 'start']
+        def animate(i):
+            #Create a while loop if there is no such CSV file and wait until it is created...
+            while True:
+                try:
+                    # Read the CSV file with ';' delimiter
+                    df = pd.read_csv('pyJoules_result.csv', delimiter=';')
+                    #Do not get the rows with start tag.
+                    df = df[df['tag'] != 'start']
 
-                # Convert the timestamp column to datetime format
-                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+                    # Convert the timestamp column to datetime format
+                    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
 
-                # Calculate the elapsed time since the earliest timestamp
-                df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).dt.total_seconds()
+                    # Calculate the elapsed time since the earliest timestamp
+                    df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).dt.total_seconds()
 
-                # Clear the plot
-                ax.clear()
+                    # Clear the plot
+                    ax.clear()
 
-                # Plot the data
-                '''
-                Package_0 refers to the energy consumption of the entire package, which typically includes
-                the CPU cores, integrated GPU, and other components on the chip. It represents the total power
-                consumed by the processor package.
+                    # Plot the data
+                    '''
+                    Package_0 refers to the energy consumption of the entire package, which typically includes
+                    the CPU cores, integrated GPU, and other components on the chip. It represents the total power
+                    consumed by the processor package.
 
-                In order to calculate total energy consumption we should sum them up with DRAM energy consumtpion
-                '''
-                ax.plot(df['elapsed_time'], (mikroJ_to_kw_hour(df['package_0'])+mikroJ_to_kw_hour(df['dram_0'])))
+                    In order to calculate total energy consumption we should sum them up with DRAM energy consumtpion
+                    '''
+                    ax.plot(df['elapsed_time'], (mikroJ_to_kw_hour(df['package_0'])+mikroJ_to_kw_hour(df['dram_0'])))
 
-                # Set labels and title
-                ax.set_xlabel('Elapsed Time (seconds)')
-                ax.set_ylabel('Energy Consumption (kw/h)')
-                ax.set_title('Energy Consumption over Time')
+                    # Set labels and title
+                    ax.set_xlabel('Elapsed Time (seconds)')
+                    ax.set_ylabel('Power Consumption (kw/h)')
+                    ax.set_title('Power Consumption over Time')
 
-                # Format x-axis
-                plt.gcf().autofmt_xdate()
+                    # Format x-axis
+                    plt.gcf().autofmt_xdate()
 
-                # Adjust layout
-                plt.tight_layout()
-                plt.show()
-                break
-            except:
-                print("There is no such a CSV file please wait until it's created...")
-                time.sleep(5)
+                    # Adjust layout
+                    plt.tight_layout()
+                    plt.show()
+                    break
+                except:
+                    print("There is no such a CSV file please wait until it's created...")
+                    time.sleep(5)
 
 
-    # Create the animation
-    ani = FuncAnimation(fig, animate, interval=1000)
-
-    plt.tight_layout()
-    plt.show()
-
+        # Create the animation
+        ani = FuncAnimation(fig, animate, interval=1000)
+        
+        #plt.tight_layout()
+        plt.show()
+        # Save the plot as an image file
+        plt.savefig('energy_consumption_plot.png')
+    except KeyboardInterrupt:
+        # Save the plot as an image file
+        plt.savefig('energy_consumption_plot.png')
 
 #Function to run power_top. The object will be assigned globally
-def run_powertop():
+def run_powertop(n_times):
 
-    for i in range(3):
+    for i in range(n_times):
         #Run the powertop and collect some info about power usage
         powertop_instance.run_powertop()
-    #top_10_df = powertop_instance.get_top10_as_df()
-    #print(top_10_df)
-
-    #top_10_process = powertop_instance.get_top_process_pids()
-    #print(top_10_process)
-
 #Multiprocessing
 if __name__=='__main__':
 
-    p4 = Process(target=run_powertop)
+    p4 = Process(target=run_powertop, args=(12,))
     p4.start()
-    p2 = Process(target=track_energy, args=(3,))
+    p2 = Process(target=track_energy, args=(12,))
     p2.start()
     p1 = Process(target=print_changed_content)
     p1.start()
-    #p3 = Process(target=visualize)
-    #p3.start()
+    p3 = Process(target=visualize)
+    p3.start()
+
    
-    #visualize()
-    
+       
     
