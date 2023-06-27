@@ -30,7 +30,9 @@ the total energy consumption of last n seconds.
 #Global powertop instance
 #Runs for 30secs and writes report into report.csv
 #It takes extra 4secs to write report
-powertop_instance = powerTOP(time=25, iteration=0)
+powertop_instance = powerTOP(time=25, iteration=0, latest=False)
+#Target csv file to store pyJoules energy measurements
+csv_handler = CSVHandler('pyJoules_result.csv')
 
 # Convert mikroJ to kW
 def mikroJ_to_kw_hour(mJ):
@@ -54,12 +56,13 @@ def efficiency_difference(before, after):
 # A function with 1 second breaks until user types Ctrl + C
 def foo(duration):
     try:
-        i = 0
-        while i<duration:
-            print("foo ",i)
+        i = 1
+        while i<duration+1:
+            if(i%5==0):
+                print('foo', i)
             time.sleep(1)
             i+=1
-
+            
     except KeyboardInterrupt:
         pass    
 
@@ -70,14 +73,8 @@ def bar(duration):
         i = 0
         while i<duration:
             print("bar ",i)
-            a = return_random_int()
-            b = return_random_int()
-            #print(a, b)
             time.sleep(1)
-            #print(f"a: {a}, b: {b}, (a*b*(a**2/b*b**2))**0.5 : {(a*b*(a**2 / (b*b**2)))**0.5}")
             i+=1
-
-
     except KeyboardInterrupt:
         pass 
 
@@ -94,51 +91,49 @@ def print_changed_content(filename='pyJoules_result.csv'):
             previous_data = pd.DataFrame()  # Variable to store previous data
             previous_total = 0 # Keep the last n seconds data
             while True:
-                #print("Print changed content")
-
-                #while True:
+                
                 current_data = pd.read_csv(filename, sep=';')  # Read the CSV file
-
-                #print(f"previous_data shape: {previous_data.shape[0]}, current_data shape: {current_data.shape[0]}")
-
+                
+                #New data enters
                 if has_data_changed(current_data, previous_data):
-                    # Delete rows with 'tag' column value as 'start'
-                    #current_data = current_data[current_data['tag'] != 'start']
-                    print(current_data)  # Print the current data if it has changed
 
                     #Just take the new added part and summarize the energy consumption of last x seconds and see the difference between 
                     #energy consumptions
                     last_df = current_data[~current_data.isin(previous_data)].dropna()
-                    print("**************************")
+                    print
                     print(f'''
+********************************************************************************************************
                     Summary of last {last_df['duration'].sum():.2f} seconds
                     All cpu core energy consumption: {format_scientific_notation(last_df['core_0'].sum())} kw/h
                     Integrated GPU energy consumption: {format_scientific_notation(last_df['uncore_0'].sum())} kw/h
                     Memory energy consumption: {format_scientific_notation(last_df['dram_0'].sum())} kw/h
+********************************************************************************************************
                     ''')
 
                     #Compare the energy consumption difference with last n seconds
                     current_total = last_df['core_0'].sum() + last_df['uncore_0'].sum() + last_df['dram_0'].sum()
                     #previous_total = previous_last_df['core_0'].sum() + previous_last_df['uncore_0'].sum() + previous_last_df['dram_0'].sum()
                     
+                    #If there is previous data
                     if(previous_total != 0):
+                        #calculate the efficiency
                         difference = efficiency_difference(previous_total, current_total)
                         if(difference > 0):
-                            print(f"Total Energy consumption increased by {abs(difference):.2f}%")
+                            print(f"Total Energy consumption increased by {abs(difference):.2f}% compared to last n seconds")
                             top_10_process = powertop_instance.get_top_process_pids()
-                            print(f'top_10_process: {top_10_process}')
+                            print(f'TOP 10 PROCESS: {top_10_process}')
 
                         else:
-                            print(f"Total Energy consumption decreased by {abs(difference):.2f}%")
+                            print(f"Total Energy consumption decreased by {abs(difference):.2f}% compared to last n seconds")
                             top_10_process = powertop_instance.get_top_process_pids()
-                            print(f'top_10_process: {top_10_process}')
-
+                            print(f'TOP 10 PROCESS: {top_10_process}')
 
                     previous_total = current_total #update previous_total
 
                 previous_data = current_data  # Update the previous data
                 time.sleep(2)
-        #If there is no such a file wait until it created
+
+        #If there is no such a file as pyJoules_result.csv wait until it created by pyJoules
         except FileNotFoundError:
             time.sleep(5)
             pass
@@ -149,31 +144,29 @@ def print_changed_content(filename='pyJoules_result.csv'):
 If you want to know where is the "hot spots" where your python code consume the most energy you can add "breakpoints" 
 during the measurement process and tag them to know amount of energy consumed between this breakpoints.
 '''
-csv_handler = CSVHandler('pyJoules_result.csv')
-def track_energy():
+def track_energy(n_times):
     stop_flag = 0
     try:
         j = 0
-        while j < 5 and stop_flag == 0:
+        while j < n_times and stop_flag == 0:
             with EnergyContext(handler=csv_handler) as ctx:
-                for i in range(3):
-                    #first function
-                    ctx.record(tag='foo')
-                    foo(5)
-                    #second function
-                    ctx.record(tag='bar')
-                    bar(5)
+                #first function
+                ctx.record(tag='foo')
+                foo(30)
+                #second function
+                #ctx.record(tag='bar')
+                #bar(5)
             csv_handler.save_data()
-            time.sleep(2)
             j+=1
+            print(f'{j*30} seconds...')
         print("***********\nEnergy Consumption Tracking is OVER!\n***************")
     except KeyboardInterrupt:
         stop_flag = 1
         print("Interrupted")
 
 '''
-There is a little problem with visualization. Due to we get timestamp the elapsed time calculating by the
-timeline when the function called. If we didn't clear the csv file and run it 5 mins later it will show the
+There is a little problem with visualization. Due to we get timestamp, the elapsed time calculating by the
+timeline when the function called. If we didn't clear the pyJoules_result.csv file and run it 5 mins later it will show the
 figure as it was working for 300 seconds. 
 '''
 def visualize():
@@ -184,7 +177,7 @@ def visualize():
     fig, ax = plt.subplots()
 
     def animate(i):
-        #Create a while loop if there is no such a CSV file wait until it is creating...
+        #Create a while loop if there is no such CSV file and wait until it is created...
         while True:
             try:
                 # Read the CSV file with ';' delimiter
@@ -224,7 +217,7 @@ def visualize():
                 plt.show()
                 break
             except:
-                print("There is no such a CSV file please wait until it is creating...")
+                print("There is no such a CSV file please wait until it's created...")
                 time.sleep(5)
 
 
@@ -238,10 +231,9 @@ def visualize():
 #Function to run power_top. The object will be assigned globally
 def run_powertop():
 
-    for i in range(5):
+    for i in range(3):
         #Run the powertop and collect some info about power usage
         powertop_instance.run_powertop()
-        time.sleep(2)
     #top_10_df = powertop_instance.get_top10_as_df()
     #print(top_10_df)
 
@@ -253,7 +245,7 @@ if __name__=='__main__':
 
     p4 = Process(target=run_powertop)
     p4.start()
-    p2 = Process(target=track_energy)
+    p2 = Process(target=track_energy, args=(3,))
     p2.start()
     p1 = Process(target=print_changed_content)
     p1.start()

@@ -3,6 +3,7 @@ import csv
 import pandas as pd
 import subprocess
 import os
+import datetime;
 
 #Side not
 '''
@@ -17,10 +18,20 @@ ct = datetime.datetime.now()
 '''
 
 #Class for executing powerTop commands.
+'''
+latest: Get the latest report: true:false.
+    -false: get the report created before the latest.
+   We need that when we consecutively create new reports. 
+   Because while we analyze the last report we run powerTOP immediately, 
+   the latest report will be an empty report of the next n second's power analysis. 
+   In that case, we want to read the second current report.
+'''
+
 class powerTOP:
-    def __init__(self, time, iteration=0):
+    def __init__(self, time, iteration=0, latest=True):
         self.time = time
         self.iteration = iteration
+        self.latest = latest
 
     #Run the PowerTOP command
     def run_powertop(self):
@@ -28,25 +39,32 @@ class powerTOP:
         #We can assign the path as the latest report to analyze
         if(self.iteration!=0):
             command = f"sudo powertop --csv=report.csv --time={self.time} -i {self.iteration}"
-        #If there is no iteration save as @report.csv
+        #If there is no iteration save as @report-currenttime.csv
         else:
-            command = f"sudo powertop --csv=report.csv --time={self.time}"
+            #take the current time
+            ct = str(datetime.datetime.now())
+            ct = ct.replace(' ', '-')
+            path = 'report-'+ct+'.csv'
+            print(f'path:{path}') 
+            command = f"sudo powertop --csv={path} --time={self.time}"
         subprocess.run(command, shell=True)
 
-    #Extract the Top 10 Power Consumers part as a list
+    #Extract the Top 10 Power Consumers part of latest report as a list
     def extract_top_power_consumers(self):
         dataset = []
         pattern = "*  *  *   Top 10 Power Consumers   *  *  *"
         end_pattern = "____________________________________________________________________"
         found_pattern = False
 
-        #Find the latest report if there is iteration
-        if(self.iteration != 0):
-            reports = [filename for filename in os.listdir('.') if filename.startswith("report-")]
-            reports.sort(reverse=True)
-            path = reports[0]
-        else:
-            path = 'report.csv'
+        #Find the latest report
+        reports = [filename for filename in os.listdir('.') if filename.startswith("report-")]
+        reports.sort(reverse=True)
+
+        #If latest true get the latest report else get second current report
+        path = reports[0] if self.latest else reports[1]
+
+        print(f'**************\n\{path} is analyzing /\n**************')
+
         with open(path, newline='') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:

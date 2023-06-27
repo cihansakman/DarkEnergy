@@ -23,20 +23,15 @@ This repository provides tools for tracking energy consumption and data consumpt
 - Width: 64 bits
 - Clock: 33MHz
 
-## Energy Consumption
+## Energy Consumption Overview
 
-This repository provides two libraries for tracking energy consumption:
+The Energy Consumer Tracker is a Python-based tool that allows you to monitor and track the energy consumption of your device using the RAPL (Running Average Power Limit) power meter from Intel. It provides real-time insights into the energy consumption of different components such as the CPU, integrated GPU, and DRAM.
 
-### pyJoules
+The tool utilizes the **pyJoules** library, a Python library that allows you to measure and monitor energy consumption on systems with Intel RAPL support. By sampling the energy usage every 30 seconds, it records the data and stores it in a CSV file. Additionally, it calculates the percentage change in energy consumption between consecutive 30-second intervals, providing a measure of energy consumption fluctuations.
 
-pyjoules is a Python library that allows you to measure and monitor energy consumption on systems with Intel RAPL (Running Average Power Limit) support. It provides a simple and convenient way to access energy-related information, such as package power and energy consumption.
+The Energy Consumer Tracker also leverages the **PowerTOP** (Linux Tool) utility to collect energy consumption reports concurrently. By comparing the recorded data with the expected energy consumption, it identifies any unexpected increases in power consumption. In such cases, the tool retrieves the top 10 Power Consuming Processes' id (PID) using the PowerTOP library and presents them to the user using the Python library **psutil**. This detailed information empowers users to take necessary actions, such as terminating or killing unnecessary processes, to mitigate excessive power usage.
 
-You can find more information about pyjoules on its [GitHub repository](https://github.com/powerapi-ng/pyJoules/blob/master/README.md#rapl-domain-description).
-
-
-#### pyJoules-Nvidia GPU
-
-pyJoules uses the nvidia "Nvidia Management Library" technology to measure energy consumption of nvidia devices. The energy measurement API is only available on nvidia GPU with Volta architecture(2018)
+Furthermore, the Energy Consumer Tracker offers visualization capabilities to present the power consumption results obtained from the pyJoules library. This visualization provides users with a clear and intuitive representation of energy consumption trends over time.
 
 #### pyJoules Example output
 
@@ -52,21 +47,25 @@ begin timestamp : 1685697444.8609605; tag : foo; duration : 4.584830045700073; p
 
 - uncore_0: This refers to the energy consumption of the uncore components. The uncore includes parts of the CPU that are not directly related to the cores, such as the memory controller, cache hierarchy, and other on-chip components. It represents the power consumed by these components.
 
-The output displays the energy measurements for the specified duration. The values for package_0, dram_0, core_0, and uncore_0 are given in joules (J) and indicate the total energy consumed by each component during the execution of the function.
+The output displays the energy measurements for the specified duration. The values for package_0, dram_0, core_0, and uncore_0 are given in mikrojoules (mJ) and indicate the total energy consumed by each component during the execution of the function.
 
-### pyRAPL
+<p align="center">
+  <img src="figures/visualization.png" alt="Data Consumption Figure"/>
+</p>
 
-pyRAPL is another Python library that enables you to measure and monitor energy consumption on Intel platforms using the RAPL interface. It provides a high-level API to measure energy usage at different levels, such as package, DRAM, and individual cores.
 
-More details about pyRAPL can be found on its [GitHub repository](https://github.com/powerapi-ng/pyRAPL).
+## Features
+-   Monitoring and tracking of energy consumption using the RAPL power meter.
+-   Calculation of energy consumption for CPU, integrated GPU, and DRAM.
+-   Recording and storage of energy consumption data in a CSV file at 30-second intervals.
+-   Calculation of percentage changes in energy consumption between consecutive intervals.
+-   Concurrent execution of PowerTOP utility for collecting energy consumption reports.
+-   Identification of top 10 power-consuming processes using psutil library.
+-   Visualization of power consumption results from PyJoules library.
 
-## Data Consumption
+## Future Enhancements
 
-For tracking data consumption, this repository utilizes the following library:
-
-### psutil
-
-psutil is a cross-platform library for retrieving information on running processes and system utilization, including CPU, memory, disk, and network usage. It provides various functions and methods to monitor network traffic and calculate data consumption.
-
-You can learn more about psutil and its capabilities on its [GitHub repository](https://github.com/giampaolo/psutil).
-
+-   Advanced analytics and insights on energy consumption patterns.
+-   Real-time alerts and notifications for significant changes in power consumption.
+-   Integration with power management systems for automated power optimization.
+-   Compatibility with virtual and physical machines for versatile energy tracking capabilities.
