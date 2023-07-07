@@ -1,12 +1,17 @@
 from pyJoules.energy_meter import EnergyContext
 from pyJoules.handler.csv_handler import CSVHandler
 import time
-import random
+import os
 import pandas as pd
+import json
 from multiprocessing import Process
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+
+#Classes
 from powerTop import powerTOP
+from socket_client import BackgroundSocketIO  # Import the BackgroundSocketIO class from the background_socketio.py file
+
 
 '''
 In this script, we're tracking the energy consumption of different functions for each given seconds and save them into CSV files.
@@ -27,6 +32,28 @@ the total energy consumption of last n seconds.
 *    uncore : correspond to the integrated GPU energy consumption
 
 '''
+
+
+#remove the reports before starting
+directory = "./"
+
+# Get a list of all files in the directory
+files = os.listdir(directory)
+
+# Iterate over the files
+try:
+    for file in files:
+        # Check if the file starts with "report-" and has a ".csv" extension
+        if file.startswith("report-") and file.endswith(".csv"):
+            # Create the file path
+            file_path = os.path.join(directory, file)
+            # Remove the file
+            os.remove(file_path)
+    os.remove('./pyJoules_result.csv')
+except:
+    pass
+
+
 #Global powertop instance
 #Runs for 30secs and writes report with current timestamp.
 #It takes extra 4secs to write the report
@@ -80,6 +107,29 @@ def has_data_changed(current_data, previous_data):
     # Compare the current data with the previous data
     return not current_data.shape[0] == previous_data.shape[0]
 
+#Get the tab titles based on OSids from ChromeExtension's processes JSON file.
+#Keeps the titles as key-value pairs of OSid: Tab Title
+def get_tab_titles(osids, json_file_path='data_from_socket.json'):
+    try:
+        with open(json_file_path) as f:
+            data = json.load(f)
+            processes = data.get('processes', {})
+            
+            tab_titles = {}
+            for process in processes.values():
+                os_process_id = process.get('osProcessId')
+                if os_process_id in osids:
+                    tasks = process.get('tasks', [])
+                    for task in tasks:
+                        title = task.get('title')
+                        if title:
+                            tab_titles[os_process_id] = title
+            
+            return tab_titles
+    except:
+        print(f"Most probably there is no filed called {json_file_path}")
+
+
 # Function to print the content if it has changed
 def print_changed_content(filename='pyJoules_result.csv'):
     while True:
@@ -116,13 +166,22 @@ def print_changed_content(filename='pyJoules_result.csv'):
                         difference = efficiency_difference(previous_total, current_total)
                         if(difference > 0):
                             print(f"Total Energy consumption increased by {abs(difference):.2f}% compared to last {last_df['duration'].sum():.2f} seconds")
-                            top_10_process = powertop_instance.get_top_process_pids()
-                            print(f'TOP 10 PROCESS: {top_10_process}')
 
                         else:
                             print(f"Total Energy consumption decreased by {abs(difference):.2f}% compared to last {last_df['duration'].sum():.2f} seconds")
-                            top_10_process = powertop_instance.get_top_process_pids()
-                            print(f'TOP 10 PROCESS: {top_10_process}')
+                    
+                    
+                        top_10_process = powertop_instance.get_top_process_pids()
+                        print(f'TOP 10 PROCESS: {top_10_process}')
+
+                        try:
+                            #Print the chrome tabs with their title
+                            chrome_tabs = get_tab_titles(top_10_process)
+                            for key in top_10_process:
+                                if key in chrome_tabs:
+                                    print(f'{key}: {chrome_tabs[key]}')
+                        except:
+                            pass
 
                     previous_total = current_total #update previous_total
 
@@ -234,17 +293,39 @@ def run_powertop(n_times):
     for i in range(n_times):
         #Run the powertop and collect some info about power usage
         powertop_instance.run_powertop()
+
+
+def main():
+    # Create an instance of the BackgroundSocketIO class
+    background_socketio = BackgroundSocketIO()
+
+    # Start the background thread
+    background_socketio.start()
+
+    # Create and start the processes
+    p1 = Process(target=run_powertop, args=(12,))
+    p1.start()
+    p2 = Process(target=visualize)
+    p2.start()
+    p3 = Process(target=track_energy, args=(12,))
+    p3.start()
+    p4 = Process(target=print_changed_content)
+    p4.start()
+
+    # Wait for the other processes to finish
+    p1.join()
+    p2.join()
+    p3.join()
+    p4.join()
+
+    # Wait for the background thread to finish (optional)
+    background_socketio.join()
+
+
 #Multiprocessing
 if __name__=='__main__':
+    main()
 
-    p4 = Process(target=run_powertop, args=(12,))
-    p4.start()
-    p2 = Process(target=track_energy, args=(12,))
-    p2.start()
-    p1 = Process(target=print_changed_content)
-    p1.start()
-    p3 = Process(target=visualize)
-    p3.start()
 
    
        

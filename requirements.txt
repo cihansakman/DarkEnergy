@@ -1,3 +1,4 @@
 psutil
 pyOpenSSL
 pyJoules
+python-socketio
