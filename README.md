@@ -69,3 +69,29 @@ The output displays the energy measurements for the specified duration. The valu
 -   Real-time alerts and notifications for significant changes in power consumption.
 -   Integration with power management systems for automated power optimization.
 -   Compatibility with virtual and physical machines for versatile energy tracking capabilities.
+
+
+
+
+
+
+
+# In-Cloud Energy Consumption
+
+## Steps
+
+- Create a Google Cloud Virtual Machine Instance.
+- Create Service Account Credentials to reach out Monitoring information of your VM
+    - Go to the Google Cloud Console: https://console.cloud.google.com/
+    - Navigate to "IAM & Admin" > "Service accounts" in the left sidebar.
+    - Create a new service account and grant it the necessary permissions for accessing Google Cloud Monitoring data.
+    - Download the JSON key file for the service account.
+- Set the GOOGLE_APPLICATION_CREDENTIALS Environment Variable 
+    - To tell the Google Cloud client libraries where to find your credentials, set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the path of the downloaded JSON key file:
+    ```
+    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/keyfile.json"
+    ```
+- Create an python virtual environment
+    - python -m venv cloud_consumption_venv
+    - source cloud_consumption_venv/bin/activate
+    - pip install google-cloud-monitoring

@@ -19,9 +19,9 @@ Using multiprocessing we also tracking the CSV files if there are new data or no
 the total energy consumption of last n seconds.
 
 #Future work
--The main idea is tracking the energy consumption of each 30seconds and detect and kind of unexpected power usage. For i.e
-50% more power used for 30seconds. 
-- Then list the most consuming 5 processes by their CPU usage or Memory usage and give a warning to user!
+-The main idea is tracking the energy consumption of each 30seconds and detect any kind of unexpected power usage. For i.e
+50% more power used for last 30seconds. 
+- Then list the most consuming 10 processes by their CPU usage or Memory usage and give a warning to user! (Gathered from PowerTop)
     - PowerTOP and psutils can be used for these purpose
 '''
 
@@ -57,7 +57,8 @@ except:
 #Global powertop instance
 #Runs for 30secs and writes report with current timestamp.
 #It takes extra 4secs to write the report
-powertop_instance = powerTOP(time=8, iteration=0, latest=False)
+#Defualt time is 10secs but we can give the updated time using run_powertop() function
+powertop_instance = powerTOP(iteration=0, latest=False)
 #Target csv file to store pyJoules energy measurements
 csv_handler = CSVHandler('pyJoules_result.csv')
 
@@ -89,18 +90,6 @@ def foo(duration):
     except KeyboardInterrupt:
         pass    
 
-# Another function 
-def bar(duration):
-    #Create random integers and make some calculations for in each iteration.
-    try:
-        i = 0
-        while i<duration:
-            print("bar ",i)
-            time.sleep(1)
-            i+=1
-    except KeyboardInterrupt:
-        pass 
-
 # Livestream of the CSV file.
 # Function to check if the data has changed
 def has_data_changed(current_data, previous_data):
@@ -131,22 +120,19 @@ def get_tab_titles(osids, json_file_path='data_from_socket.json'):
 
 
 # Function to print the content if it has changed
+#   - When pyJoules calculates the new 'n' time period of power usage, it will update the csv file.
 def print_changed_content(filename='pyJoules_result.csv'):
     while True:
         try:
             previous_data = pd.DataFrame()  # Variable to store previous data
             previous_total = 0 # Keep the last n seconds data
             while True:
-                
                 current_data = pd.read_csv(filename, sep=';')  # Read the CSV file
-                
+
                 #New data enters
                 if has_data_changed(current_data, previous_data):
-
-                    #Just take the new added part and summarize the energy consumption of last x seconds and see the difference between 
-                    #energy consumptions
+                    #Just take the new added part and summarize the energy consumption of last n seconds and see the difference between energy consumptions
                     last_df = current_data[~current_data.isin(previous_data)].dropna()
-                    print
                     print(f'''
 ********************************************************************************************************
                     Summary of last {last_df['duration'].sum():.2f} seconds
@@ -166,20 +152,21 @@ def print_changed_content(filename='pyJoules_result.csv'):
                         difference = efficiency_difference(previous_total, current_total)
                         if(difference > 0):
                             print(f"Total Energy consumption increased by {abs(difference):.2f}% compared to last {last_df['duration'].sum():.2f} seconds")
-
                         else:
                             print(f"Total Energy consumption decreased by {abs(difference):.2f}% compared to last {last_df['duration'].sum():.2f} seconds")
                     
-                    
+
+                        #Get the top 10 processes from PowerTop instance
                         top_10_process = powertop_instance.get_top_process_pids()
                         print(f'TOP 10 PROCESS: {top_10_process}')
 
                         try:
-                            #Print the chrome tabs with their title
+                            #Print the most energy consuming chrome tabs with their title
                             chrome_tabs = get_tab_titles(top_10_process)
+                            print("Most Energy consuming Chrome Tabs Listed Below")
                             for key in top_10_process:
                                 if key in chrome_tabs:
-                                    print(f'{key}: {chrome_tabs[key]}')
+                                    print(f'* {key}: {chrome_tabs[key]}')
                         except:
                             pass
 
@@ -197,7 +184,7 @@ def print_changed_content(filename='pyJoules_result.csv'):
 If you want to know where is the "hot spots" where your python code consume the most energy you can add "breakpoints" 
 during the measurement process and tag them to know amount of energy consumed between this breakpoints.
 '''
-def track_energy(n_times):
+def track_energy(n_times, n_seconds):
     stop_flag = 0
     try:
         j = 0
@@ -205,13 +192,10 @@ def track_energy(n_times):
             with EnergyContext(handler=csv_handler) as ctx:
                 #first function
                 ctx.record(tag='foo')
-                foo(10)
-                #second function
-                #ctx.record(tag='bar')
-                #bar(5)
+                foo(n_seconds)
             csv_handler.save_data()
             j+=1
-            print(f'{j*10} seconds...')
+            print(f'{j*n_seconds} seconds...')
         print("***********\nEnergy Consumption Tracking is OVER!\n***************")
 
     except KeyboardInterrupt:
@@ -222,6 +206,8 @@ def track_energy(n_times):
 There is a little problem with visualization. Due to we get timestamp, the elapsed time calculating by the
 timeline when the function called. If we didn't clear the pyJoules_result.csv file and run it 5 mins later it will show the
 figure as it was working for 300 seconds. 
+
+Temporary solution: Remove pyJoules_result.csv file in each run
 '''
 def visualize():
     try:
@@ -288,11 +274,10 @@ def visualize():
         plt.savefig('energy_consumption_plot.png')
 
 #Function to run power_top. The object will be assigned globally
-def run_powertop(n_times):
-
+def run_powertop(n_times, n_seconds):
     for i in range(n_times):
         #Run the powertop and collect some info about power usage
-        powertop_instance.run_powertop()
+        powertop_instance.run_powertop(n_seconds)
 
 
 def main():
@@ -303,11 +288,11 @@ def main():
     background_socketio.start()
 
     # Create and start the processes
-    p1 = Process(target=run_powertop, args=(12,))
+    p1 = Process(target=run_powertop, args=(12, 20))
     p1.start()
     p2 = Process(target=visualize)
     p2.start()
-    p3 = Process(target=track_energy, args=(12,))
+    p3 = Process(target=track_energy, args=(12, 20))
     p3.start()
     p4 = Process(target=print_changed_content)
     p4.start()

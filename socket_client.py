@@ -66,6 +66,7 @@ class BackgroundSocketIO(threading.Thread):
         def connect_error(data):
             print("The connection failed!")
 
+
         self.sio.emit('message-from-python', {'message':'Hello Im Python!'})
 
         @self.sio.on('message-to-python')
@@ -76,14 +77,14 @@ class BackgroundSocketIO(threading.Thread):
         def disconnect():
             print("I'm disconnected!")
 
-        #Catch the processes coming from Chrome Extension.
+        #Catch the processes coming from Chrome Extension and save them in a JSON file.
         @self.sio.on('processes-to-python')
         def process(data):
             for tab_id, process in data['processes'].items():
                 if process.get('type') == 'renderer' and process.get('tasks') and process['tasks'][0].get('tabId'):
-                    print("Process OS ID:", process.get('osProcessId'))
+                    #print("Process OS ID:", process.get('osProcessId'))
                     title = process['tasks'][0].get('title')
-                    print("Process Tab Title:", title)
+                    #print("Process Tab Title:", title)
 
             print('****************************\n****************************\n')
             with open('data_from_socket.json', 'w') as fp:
