@@ -19,19 +19,16 @@ project_id = credentials['project_id']
 client = monitoring_v3.MetricServiceClient()
 project_name = f"projects/{project_id}"
 
-
+#VM instance id
 instance_id = credentials['instance_id']
-filter_str = f'resource.type="gce_instance" AND resource.labels.instance_id="{instance_id}" AND metric.type="compute.googleapis.com/instance/cpu/utilization"'
 
 
 # Create TimeInterval and set start and end times
 interval = monitoring_v3.TimeInterval()
 
-# Seconds in a month multiplied with 2 to get a two month interval
-# You can set this variable as you like.
-seconds_in_two_months = 30*24*60*60*2
+
 from datetime import datetime, timedelta
-# Calculate the start and end times for the last 60 minutes
+# Calculate the start and end times for the last n minutes
 end_time = datetime.now()
 start_time = end_time - timedelta(minutes=30)
 
@@ -57,16 +54,18 @@ interval = monitoring_v3.TimeInterval(
 cpu_utilization_filter = f'resource.type="gce_instance" AND resource.labels.instance_id="{instance_id}" AND metric.type="compute.googleapis.com/instance/cpu/utilization"'
 received_bytes_filter = f'resource.type="gce_instance" AND resource.labels.instance_id="{instance_id}" AND metric.type="compute.googleapis.com/instance/network/received_bytes_count"'
 sent_bytes_filter = f'resource.type="gce_instance" AND resource.labels.instance_id="{instance_id}" AND metric.type="compute.googleapis.com/instance/network/sent_bytes_count"'
+memory_utilization_filter = f'resource.type="gce_instance" AND resource.labels.instance_id="{instance_id}" AND metric.type="agent.googleapis.com/memory/percent_used" AND metric.labels.state="used"'
 
 
 # List of filter strings
-filter_strs = [cpu_utilization_filter, received_bytes_filter, sent_bytes_filter]
+filter_strs = [cpu_utilization_filter, received_bytes_filter, sent_bytes_filter, memory_utilization_filter]
 
 # Define human-readable metric names for dictionary keys
 metric_names = {
     cpu_utilization_filter: 'CPU usage(%)',
     received_bytes_filter: 'Received Bytes',
-    sent_bytes_filter: 'Sent Bytes'
+    sent_bytes_filter: 'Sent Bytes',
+    memory_utilization_filter: 'Memory Utilization(%)'
 }
 
 # Create a dictionary to store metric values for each timestamp
@@ -86,10 +85,13 @@ for filter_str in filter_strs:
     for series in response:
         for point in series.points:
             timestamp = point.interval.start_time.timestamp()
-            readable_timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-
+            rounded_timestamp = datetime.fromtimestamp(timestamp).replace(second=0)
+            readable_timestamp = rounded_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            
             if metric_name == 'CPU usage(%)':
                 metric_value = point.value.double_value * 100.0
+            elif metric_name == 'Memory Utilization(%)':
+                metric_value = point.value.double_value 
             else:
                 metric_value = point.value.int64_value
 
@@ -97,17 +99,17 @@ for filter_str in filter_strs:
 
 # Create the CSV file and write the header
 csv_filename = 'metric_data.csv'
-fieldnames = ['timestamp', 'CPU usage(%)', 'Sent Bytes', 'Received Bytes']
+fieldnames = ['timestamp', 'CPU usage(%)', 'Sent Bytes', 'Received Bytes', 'Memory Utilization(%)']
 
 with open(csv_filename, mode='w', newline='') as csv_file:
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     writer.writeheader()
 
     # Iterate through the timestamps and write data to CSV
-    timestamps = set()
-    for data in metric_data.values():
-        timestamps.update(data.keys())
+    # Sort timestamps in ascending order
+    timestamps = sorted(set(timestamp for data in metric_data.values() for timestamp in data.keys()))
 
+    # Iterate through the sorted timestamps and write data to CSV
     for timestamp in timestamps:
         row = {'timestamp': timestamp}
         for metric_name in metric_data:
@@ -119,3 +121,37 @@ with open(csv_filename, mode='w', newline='') as csv_file:
         print(row)
 
 print(f"Metric data saved to {csv_filename}")
+
+
+
+
+'''
+# Create the filter string for memory utilization metric
+memory_utilization_filter = (
+    f'resource.type="gce_instance" AND '
+    f'resource.labels.instance_id="{instance_id}" AND '
+    f'metric.type="agent.googleapis.com/memory/percent_used" AND '
+    f'metric.labels.state="used"'
+)
+# Retrieve memory utilization metric data
+response = client.list_time_series(
+    name=f"projects/{project_id}",
+    filter=memory_utilization_filter,
+    interval=interval,
+    view=monitoring_v3.ListTimeSeriesRequest.TimeSeriesView.FULL
+)
+
+# Process and print memory utilization data
+for series in response:
+    for point in series.points:
+        timestamp = point.interval.start_time.timestamp()
+        readable_timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        memory_utilization = point.value.double_value # Convert to percentage
+
+        print(f"Timestamp: {readable_timestamp}, Memory Utilization: {memory_utilization:.2f}%")
+'''
+
+
+#print(f"******************\n{response}\n***************")
+
+

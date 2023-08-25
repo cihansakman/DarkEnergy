@@ -91,7 +91,7 @@ The output displays the energy measurements for the specified duration. The valu
     ```
     export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/keyfile.json"
     ```
-- Create an python virtual environment
+- Create a python virtual environment and install google-cloud-monitoring tool
     - python -m venv cloud_consumption_venv
     - source cloud_consumption_venv/bin/activate
     - pip install google-cloud-monitoring
