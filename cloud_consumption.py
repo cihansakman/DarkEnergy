@@ -30,7 +30,8 @@ interval = monitoring_v3.TimeInterval()
 from datetime import datetime, timedelta
 # Calculate the start and end times for the last n minutes
 end_time = datetime.now()
-start_time = end_time - timedelta(minutes=30)
+time_interval = 6 * 24 * 60 #1 week in minutes
+start_time = end_time - timedelta(minutes=time_interval)
 
 # Print the starting time
 print("Starting time:", start_time.strftime('%B %d, %Y %H:%M:%S'))
@@ -124,6 +125,49 @@ print(f"Metric data saved to {csv_filename}")
 
 
 
+######### POWER CONSUMPTION CALCULATIONS BASED ON GCP METRICS AND CONSTANTS ##########
+
+from gcp_cloud_constants import *
+
+# define VM processor
+compute_processor = "BROADWELL"
+
+min_watts = getMinWatts(compute_processor)
+max_watts = getMaxWatts(compute_processor)
+
+
+
+def calculate_power_consumption(cpu_utilization, memory_utilization, network_traffic, disk_utilization, region):
+    # Get min and max watts based on compute processor (you can replace "BROADWELL1" with your actual processor)
+    #min_watts = getMinWatts("BROADWELL")
+    #max_watts = getMaxWatts("BROADWELL")
+
+    # Calculate energy usage for CPU and memory
+    cpu_energy =( (cpu_utilization / 100) * (max_watts - min_watts) + min_watts ) / 1000
+    memory_energy = ( (memory_utilization / 100) * MEMORY_COEFFICIENT ) / 1000
+
+    # Calculate energy usage for network and disk
+    network_energy = (network_traffic / (1024 * 1024 * 1024)) * NETWORKING_COEFFICIENT  # Convert bytes to GB
+    disk_energy = (disk_utilization / 100) * HDDCOEFFICIENT
+
+    # Total energy consumption before applying PUE
+    total_energy_before_pue = cpu_energy + memory_energy + network_energy + disk_energy
+
+    # Apply PUE for region
+    pue = getPUE(region)
+    total_energy = total_energy_before_pue * pue
+
+    return total_energy
+
+# Example usage
+cpu_utilization = 2  # Example CPU utilization percentage
+memory_utilization = 12  # Example memory utilization percentage
+network_traffic = 1024 * 1024 * 1024  # Example network traffic in bytes per minute
+disk_utilization = 34.4  # Example disk utilization percentage
+region = "EUROPE_WEST6"  # Example region
+
+power_consumption = calculate_power_consumption(cpu_utilization, memory_utilization, network_traffic, disk_utilization, region)
+print(f"Estimated Power Consumption: {power_consumption} kWh")
 
 '''
 # Create the filter string for memory utilization metric
