@@ -1,4 +1,4 @@
-from cloud_consumption.gcp_cloud_constants import *
+from gcp_cloud_constants import *
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
