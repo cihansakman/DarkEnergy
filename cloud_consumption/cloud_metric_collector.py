@@ -108,12 +108,8 @@ class MetricDataCollector:
 
         print(f"Metric data saved to {csv_filename}")
 
-if __name__ == "__main__":
-    collector = MetricDataCollector('cloud_credentials.json')
-    collector.collect_metric_data()
 
 
-# Create the filter string for memory utilization metric
 '''
 memory_utilization_filter = (
     f'resource.type="gce_instance" AND '
