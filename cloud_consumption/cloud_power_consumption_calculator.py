@@ -28,7 +28,7 @@ class MetricAnalyzer:
         disk_energy = ((((self.DISKSPACE * disk_utilization) / 100) / 1024) * HDDCOEFFICIENT) # Converts gb to tb / hour
 
         # Total energy consumption before applying PUE
-        total_energy_before_pue = cpu_energy + memory_energy + network_energy + disk_energy
+        total_energy_before_pue = (cpu_energy*60) + (memory_energy*60) + network_energy + (disk_energy*60)
 
         # Apply PUE for region
         # If region is not found it will return avg PUE for GCP
@@ -102,10 +102,10 @@ class MetricAnalyzer:
         axs[1, 0].set_xticklabels(axs[1, 0].get_xticklabels(), rotation=45)  # Rotate x-values by 45 degrees
         axs[1, 0].legend()
 
-        axs[1, 1].plot(timestamps, power_consumption, label="Power Consumption(Wh)", color="brown")
-        axs[1, 1].set_title("Power Consumption over Time")
+        axs[1, 1].plot(timestamps, power_consumption, label="Energy Consumption(Wh)", color="brown")
+        axs[1, 1].set_title("Energy Consumption over Time")
         axs[1, 1].set_xlabel("Timestamp")
-        axs[1, 1].set_ylabel("Power Consumption(Wh)")
+        axs[1, 1].set_ylabel("Energy Consumption(Wh)")
         axs[1, 1].set_xticklabels(axs[1, 1].get_xticklabels(), rotation=45)  # Rotate x-values by 45 degrees
 
         # Format timestamps without the year
