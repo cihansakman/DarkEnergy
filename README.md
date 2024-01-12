@@ -23,9 +23,27 @@ This repository provides tools for tracking energy consumption and data consumpt
 - Width: 64 bits
 - Clock: 33MHz
 
+## How to Run the Code
+
+1. Set up the Chrome Extension and WebSocketServer beforehand.
+2. Before running the code, ensure that the required dependencies are installed:
+  ```
+  pip install -r requirements.txt
+  ```
+3. Execute the following command to obtain an overall network usage:
+  ```
+  python data_consumption.py
+  ```
+4. Execute the following command to get insights into the power consumption of the local machine:
+  ```
+  python pyjoules_energy_consumption.py
+  ```
+5. Refer to [here](#in-cloud-energy-consumption) for In-Cloud Energy Consumption tracking
+
+
 ## Energy Consumption Overview
 
-The Energy Consumer Tracker is a Python-based tool that allows you to monitor and track the energy consumption of your device using the RAPL (Running Average Power Limit) power meter from Intel. It provides real-time insights into the energy consumption of different components such as the CPU, integrated GPU, and DRAM.
+The Energy Consumer Tracker is a Python-based tool that allows you to monitor and track your device's energy consumption using the RAPL (Running Average Power Limit) power meter from Intel. It provides real-time insights into the energy consumption of components such as the CPU, integrated GPU, and DRAM.
 
 The tool utilizes the **pyJoules** library, a Python library that allows you to measure and monitor energy consumption on systems with Intel RAPL support. By sampling the energy usage every 30 seconds, it records the data and stores it in a CSV file. Additionally, it calculates the percentage change in energy consumption between consecutive 30-second intervals, providing a measure of energy consumption fluctuations.
 
