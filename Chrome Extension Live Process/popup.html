@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://cdnjs.cloudflare.com ">
+  <meta charset="UTF-8">
+  <title>Tab Process Information</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+  <script src="popup.js"></script>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.js"></script>
+  <table id="tabTable">
+    <thead>
+      <tr>
+        <th>Tab ID</th>
+        <th>Process ID</th>
+        <th>Task</th>
+        <th>CPU Usage(%)</th>
+        <th>Active</th>
+      </tr>
+    </thead>
+    <tbody id="tabList"></tbody>
+  </table>
+
+
+</body>
+</html>
